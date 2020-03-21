@@ -1,0 +1,38 @@
+version: '3.7'
+services:
+    code_collektiv_frontend:
+        image: docker.pkg.github.com/kode-collektiv/frontend/frontend:latest
+        container_name: code_collektiv_mongodb_frontend
+        ports:
+            - 80:80
+        restart: unless-stopped
+        networks:
+            - code_collektiv
+
+    code_collektiv_backend:
+        image: docker.pkg.github.com/kode-collektiv/backend/backend:latest
+        container_name: code_collektiv_backend
+        ports:
+            - 8080:8080
+        links:
+            - mongodb
+        depends_on:
+            - mongodb
+        restart: unless-stopped
+        networks:
+            - code_collektiv
+
+    mongodb:
+        image: mongo:latest
+        container_name: code_collektiv_mongodb
+        volumes:
+          - ../mongo/data/db:/data/db
+        restart: unless-stopped
+        ports:
+            - 27017:27017
+        networks:
+            - code_collektiv
+
+networks:
+    code_collektiv:
+
