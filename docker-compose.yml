@@ -1,38 +1,73 @@
 version: '3.7'
 services:
-    code_collektiv_frontend:
-        image: docker.pkg.github.com/kode-collektiv/frontend/frontend:latest
-        container_name: code_collektiv_mongodb_frontend
-        ports:
-            - 80:80
-        restart: unless-stopped
-        networks:
-            - code_collektiv
+  traefik:
+    image: "traefik:v2.1"
+    container_name: "traefik"
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=<email address>"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - "./letsencrypt:/letsencrypt"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    labels:
+      traefik.http.routers.http_catchall.rule: HostRegexp(`{any:.+}`)
+      traefik.http.routers.http_catchall.entrypoints: web
+      traefik.http.routers.http_catchall.middlewares: https_redirect
+      traefik.http.middlewares.https_redirect.redirectscheme.scheme: https
+      traefik.http.middlewares.https_redirect.redirectscheme.permanent: true
+    networks:
+      - code_collektiv
 
-    code_collektiv_backend:
-        image: docker.pkg.github.com/kode-collektiv/backend/backend:latest
-        container_name: code_collektiv_backend
-        ports:
-            - 8080:8080
-        links:
-            - mongodb
-        depends_on:
-            - mongodb
-        restart: unless-stopped
-        networks:
-            - code_collektiv
+  code_collektiv_frontend:
+      image: docker.pkg.github.com/kode-collektiv/frontend/frontend:latest
+      container_name: code_collektiv_frontend
+      restart: unless-stopped
+      networks:
+        - code_collektiv
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.middlewares.ghost-https.redirectscheme.scheme=https"
+        - "traefik.http.routers.ghost-http.entrypoints=web"
+        - "traefik.http.routers.ghost-http.rule=Host(`<url>`)"
+        - "traefik.http.routers.ghost-http.middlewares=ghost-https@docker"
+        - "traefik.http.routers.whoami.rule=Host(`<url>`)"
+        - "traefik.http.routers.whoami.entrypoints=websecure"
+        - "traefik.http.routers.whoami.tls.certresolver=myresolver"
 
-    mongodb:
-        image: mongo:latest
-        container_name: code_collektiv_mongodb
-        volumes:
-          - ../mongo/data/db:/data/db
-        restart: unless-stopped
-        ports:
-            - 27017:27017
-        networks:
-            - code_collektiv
+  code_collektiv_backend:
+      image: docker.pkg.github.com/kode-collektiv/backend/backend:latest
+      container_name: code_collektiv_backend
+      ports:
+          - 9090:9090
+      links:
+          - mongodb
+      depends_on:
+          - mongodb
+      restart: unless-stopped
+      networks:
+          - code_collektiv
+
+  mongodb:
+      image: mongo:latest
+      container_name: code_collektiv_mongodb
+      volumes:
+        - ../mongo/data/db:/data/db
+      restart: unless-stopped
+      ports:
+          - 27017:27017
+      networks:
+          - code_collektiv
 
 networks:
     code_collektiv:
-
