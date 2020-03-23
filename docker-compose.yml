@@ -48,8 +48,6 @@ services:
   code_collektiv_backend:
       image: docker.pkg.github.com/kode-collektiv/backend/backend:latest
       container_name: code_collektiv_backend
-      ports:
-          - 9090:9090
       links:
           - mongodb
       depends_on:
@@ -64,8 +62,6 @@ services:
       volumes:
         - ../mongo/data/db:/data/db
       restart: unless-stopped
-      ports:
-          - 27017:27017
       networks:
           - code_collektiv
 
